@@ -1,11 +1,17 @@
 import React, { useState } from "react";
-import { Container, Row, Col, Form, Button, Card, Badge } from "react-bootstrap";
+import axios from 'axios';
+import { Container, Form, Button, Card, Badge } from "react-bootstrap";
 
 function RecipeInput() {
     const [ingredient, setIngredient] = useState("");
     const [ingredientsList, setIngredientsList] = useState([]);
     const [meal, setMeal] = useState("");
     const [diet, setDiet] = useState("");
+    const [calories, setCalories] = useState(200);
+
+    const generateRecipe = async () => {
+        console.log("HI");
+    }
 
     const addIngredient = () => {
         const val = ingredient.trim();
@@ -82,6 +88,12 @@ function RecipeInput() {
                     </Form.Group>
 
                     <Form.Group className="mb-3">
+                        <Form.Label>Calories</Form.Label>
+                        <Form.Control type="number" value={calories} onChange={(e) => setCalories(e.target.value)}>
+                        </Form.Control>
+                    </Form.Group>
+
+                    <Form.Group className="mb-3">
                         <Form.Label>Dietary Restrictions</Form.Label>
                         <Form.Select value={diet} onChange={(e) => setDiet(e.target.value)}>
                             <option value="">Select...</option>
@@ -93,7 +105,7 @@ function RecipeInput() {
                         </Form.Select>
                     </Form.Group>
 
-                    <Button variant="success" className="w-100 mt-3">
+                    <Button variant="success" className="w-100 mt-3" onClick={generateRecipe}>
                         Generate Recipe
                     </Button>
                 </Card.Body>

@@ -1,15 +1,25 @@
-version: '1.0'
 
 services:
-  client:
+  plated-client:
     build:
       context: ./client
     ports:
       - "3000:3000"
     depends_on:
-      - server
-  server:
+      - plated-server
+  plated-server:
     build:
       context: ./server
     ports:
       - "4000:4000"
+    depends_on:
+      - plated-datastore
+  plated-datastore:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+volumes:
+  mongo-data:
+  
