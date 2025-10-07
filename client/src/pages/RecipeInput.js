@@ -2,16 +2,89 @@ import React, { useState } from "react";
 import axios from 'axios';
 import { Container, Form, Button, Card, Badge } from "react-bootstrap";
 
+const hostUrl = process.env.REACT_APP_HOST_URL;
+
+const RecipeDisplay = ({ recipe }) => {
+    const copyToClipboard = () => {
+        const formattedRecipe = `
+${recipe.title}
+
+Ingredients:
+${recipe.ingredients.join('\n')}
+
+Instructions:
+${recipe.instructions}
+
+Meal Type: ${recipe.mealType}
+Diet: ${recipe.diet}
+Calories: ${recipe.calories}
+        `.trim();
+
+        navigator.clipboard.writeText(formattedRecipe);
+    };
+
+    return (
+        <div className="recipe-card bg-light p-4 rounded">
+            <div className="d-flex justify-content-between align-items-start mb-3">
+                <h4 className="text-success mb-0">{recipe.title}</h4>
+                <Button 
+                    variant="outline-success" 
+                    size="sm"
+                    onClick={copyToClipboard}
+                >
+                    Copy Recipe
+                </Button>
+            </div>
+
+            <div className="recipe-content">
+                <div className="d-flex gap-3 mb-3">
+                    <Badge bg="secondary">{recipe.mealType}</Badge>
+                    <Badge bg="secondary">{recipe.diet}</Badge>
+                    <Badge bg="secondary">{recipe.calories} calories</Badge>
+                </div>
+
+                <h5 className="mt-3">Ingredients:</h5>
+                <ul>
+                    {recipe.ingredients.map((ingredient, index) => (
+                        <li key={index}>{ingredient}</li>
+                    ))}
+                </ul>
+
+                <h5 className="mt-4">Instructions:</h5>
+                <p style={{ whiteSpace: 'pre-line' }}>{recipe.instructions}</p>
+            </div>
+        </div>
+    );
+};
+
 function RecipeInput() {
     const [ingredient, setIngredient] = useState("");
     const [ingredientsList, setIngredientsList] = useState([]);
     const [meal, setMeal] = useState("");
     const [diet, setDiet] = useState("");
     const [calories, setCalories] = useState(200);
+    const [isLoading, setIsLoading] = useState(false);
+    const [recipe, setRecipe] = useState(null);
 
     const generateRecipe = async () => {
-        console.log("HI");
-    }
+        try {
+            setIsLoading(true);
+            const response = await axios.post(`${hostUrl}/generateRecipe`, {
+                params: {
+                    ingredients: ingredientsList.join(', '),
+                    calories: calories,
+                    mealtype: meal,
+                    diet: diet
+                }
+            });
+            setRecipe(response.data);
+            console.log(response.data);
+        } catch (error) {
+            console.error('Error generating recipe:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const addIngredient = () => {
         const val = ingredient.trim();
@@ -62,7 +135,6 @@ function RecipeInput() {
                                     title={item}
                                 >
                                     <span className="badge-text">{item}</span>
-
                                     <button
                                         aria-label={`Remove ${item}`}
                                         className="delete-x"
@@ -89,8 +161,11 @@ function RecipeInput() {
 
                     <Form.Group className="mb-3">
                         <Form.Label>Calories</Form.Label>
-                        <Form.Control type="number" value={calories} onChange={(e) => setCalories(e.target.value)}>
-                        </Form.Control>
+                        <Form.Control 
+                            type="number" 
+                            value={calories} 
+                            onChange={(e) => setCalories(e.target.value)}
+                        />
                     </Form.Group>
 
                     <Form.Group className="mb-3">
@@ -105,72 +180,103 @@ function RecipeInput() {
                         </Form.Select>
                     </Form.Group>
 
-                    <Button variant="success" className="w-100 mt-3" onClick={generateRecipe}>
-                        Generate Recipe
+                    <Button 
+                        variant="success" 
+                        className="w-100 mt-3" 
+                        onClick={generateRecipe}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? 'Generating...' : 'Generate Recipe'}
                     </Button>
+
+                    {isLoading && (
+                        <div className="text-center mt-4">
+                            <div className="spinner-border text-success" role="status">
+                                <span className="visually-hidden">Loading...</span>
+                            </div>
+                            <p className="mt-2">Generating your recipe...</p>
+                        </div>
+                    )}
+
+                    {!isLoading && recipe && (
+                        <div className="mt-4">
+                            <h3 className="text-success mb-3">Your Recipe</h3>
+                            <RecipeDisplay recipe={recipe} />
+                        </div>
+                    )}
                 </Card.Body>
 
                 <style>{`
-          .ingredient-badge {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            padding: 0.45rem 2.2rem 0.45rem 0.8rem; /* extra right padding for X */
-            border-radius: 999px;
-            max-width: 200px;
-            line-height: 1.05;
-          }
+                    .ingredient-badge {
+                        position: relative;
+                        display: inline-flex;
+                        align-items: center;
+                        padding: 0.45rem 2.2rem 0.45rem 0.8rem;
+                        border-radius: 999px;
+                        max-width: 200px;
+                        line-height: 1.05;
+                    }
 
-          .badge-text {
-            display: inline-block;
-            max-width: 100%;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            text-align: left;
-          }
+                    .badge-text {
+                        display: inline-block;
+                        max-width: 100%;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                        text-align: left;
+                    }
 
-          .delete-x {
-            display: none;
-            position: absolute;
-            right: 6px;
-            top: 50%;
-            transform: translateY(-50%);
-            border: none;
-            background: rgba(0,0,0,0.35);
-            color: white;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            font-weight: 700;
-            line-height: 18px;
-            cursor: pointer;
-            padding: 0;
-            align-items: center;
-            justify-content: center;
-          }
+                    .delete-x {
+                        display: none;
+                        position: absolute;
+                        right: 6px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        border: none;
+                        background: rgba(0,0,0,0.35);
+                        color: white;
+                        width: 22px;
+                        height: 22px;
+                        border-radius: 50%;
+                        font-weight: 700;
+                        line-height: 18px;
+                        cursor: pointer;
+                        padding: 0;
+                        align-items: center;
+                        justify-content: center;
+                    }
 
-          .badge-hover:hover .delete-x {
-            display: inline-flex;
-          }
+                    .badge-hover:hover .delete-x {
+                        display: inline-flex;
+                    }
 
-          @media (hover: none) {
-            .delete-x {
-              display: inline-flex;
-            }
-          }
+                    .recipe-result {
+                        max-height: 400px;
+                        overflow-y: auto;
+                    }
 
-          @media (max-width: 480px) {
-            .ingredient-badge {
-              max-width: 40%;
-              padding-right: 1.6rem;
-            }
+                    .spinner-border {
+                        width: 3rem;
+                        height: 3rem;
+                    }
 
-            .badge-text {
-              font-size: 0.9rem;
-            }
-          }
-        `}</style>
+                    @media (hover: none) {
+                        .delete-x {
+                            display: inline-flex;
+                        }
+                    }
+
+                    @media (max-width: 480px) {
+                        .ingredient-badge {
+                            max-width: 40%;
+                            padding-right: 1.6rem;
+                        }
+
+                        .badge-text {
+                            font-size: 0.9rem;
+                        }
+                    }
+                `}</style>
             </Card>
         </Container>
     );
