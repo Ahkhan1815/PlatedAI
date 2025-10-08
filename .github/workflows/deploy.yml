@@ -30,13 +30,13 @@ jobs:
         run: |
           docker compose build
           
-          docker tag plated_ai-plated-client:latest ${{ secrets.ECR_REGISTRY }}/$FRONTEND_REPOSITORY:latest
-          docker tag plated_ai-plated-client:latest ${{ secrets.ECR_REGISTRY }}/$FRONTEND_REPOSITORY:${{ github.sha }}
+          docker tag plated-client:latest ${{ secrets.ECR_REGISTRY }}/$FRONTEND_REPOSITORY:latest
+          docker tag plated-client:latest ${{ secrets.ECR_REGISTRY }}/$FRONTEND_REPOSITORY:${{ github.sha }}
           docker push ${{ secrets.ECR_REGISTRY }}/$FRONTEND_REPOSITORY:latest
           docker push ${{ secrets.ECR_REGISTRY }}/$FRONTEND_REPOSITORY:${{ github.sha }}
           
-          docker tag plated_ai-plated-server:latest ${{ secrets.ECR_REGISTRY }}/$BACKEND_REPOSITORY:latest
-          docker tag plated_ai-plated-server:latest ${{ secrets.ECR_REGISTRY }}/$BACKEND_REPOSITORY:${{ github.sha }}
+          docker tag plated-server:latest ${{ secrets.ECR_REGISTRY }}/$BACKEND_REPOSITORY:latest
+          docker tag plated-server:latest ${{ secrets.ECR_REGISTRY }}/$BACKEND_REPOSITORY:${{ github.sha }}
           docker push ${{ secrets.ECR_REGISTRY }}/$BACKEND_REPOSITORY:latest
           docker push ${{ secrets.ECR_REGISTRY }}/$BACKEND_REPOSITORY:${{ github.sha }}
           
