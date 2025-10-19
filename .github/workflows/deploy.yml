@@ -42,4 +42,5 @@ jobs:
           
       - name: Force ECS Update
         run: |
-          aws ecs update-service --cluster DevCluster --service platedAI-task-service-zn5a0rsm --force-new-deployment
+          aws ecs update-service --cluster platedAI-DevOps-Deploy-Cluster --service platedAI-task-backend-service-w1ddku7h  --force-new-deployment
+          aws ecs update-service --cluster platedAI-DevOps-Deploy-Cluster --service platedAI-task-frontend-service-ut3y44vh --force-new-deployment
