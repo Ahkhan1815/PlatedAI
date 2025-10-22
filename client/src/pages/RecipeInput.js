@@ -27,8 +27,8 @@ Calories: ${recipe.calories}
         <div className="recipe-card bg-light p-4 rounded">
             <div className="d-flex justify-content-between align-items-start mb-3">
                 <h4 className="text-success mb-0">{recipe.title}</h4>
-                <Button 
-                    variant="outline-success" 
+                <Button
+                    variant="outline-success"
                     size="sm"
                     onClick={copyToClipboard}
                 >
@@ -69,14 +69,20 @@ function RecipeInput() {
     const generateRecipe = async () => {
         try {
             setIsLoading(true);
-            const response = await axios.post(`${hostUrl}/generateRecipe`, {
-                params: {
-                    ingredients: ingredientsList.join(', '),
-                    calories: calories,
-                    mealtype: meal,
-                    diet: diet
+            const response = await axios.post(
+                `${hostUrl}/generateRecipe`,
+                {
+                    params: {
+                        ingredients: ingredientsList.join(', '),
+                        calories: calories,
+                        mealtype: meal,
+                        diet: diet
+                    }
+                },
+                {
+                    headers: { 'Content-Type': 'application/json' }
                 }
-            });
+            );
             setRecipe(response.data);
             console.log(response.data);
         } catch (error) {
@@ -161,9 +167,9 @@ function RecipeInput() {
 
                     <Form.Group className="mb-3">
                         <Form.Label>Calories</Form.Label>
-                        <Form.Control 
-                            type="number" 
-                            value={calories} 
+                        <Form.Control
+                            type="number"
+                            value={calories}
                             onChange={(e) => setCalories(e.target.value)}
                         />
                     </Form.Group>
@@ -180,9 +186,9 @@ function RecipeInput() {
                         </Form.Select>
                     </Form.Group>
 
-                    <Button 
-                        variant="success" 
-                        className="w-100 mt-3" 
+                    <Button
+                        variant="success"
+                        className="w-100 mt-3"
                         onClick={generateRecipe}
                         disabled={isLoading}
                     >
