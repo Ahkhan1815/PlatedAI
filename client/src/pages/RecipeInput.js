@@ -66,11 +66,15 @@ function RecipeInput() {
     const [isLoading, setIsLoading] = useState(false);
     const [recipe, setRecipe] = useState(null);
 
+    const api = axios.create({
+        baseURL: '/api/',
+    });
+
     const generateRecipe = async () => {
         try {
             setIsLoading(true);
-            const response = await axios.post(
-                `${hostUrl}/generateRecipe`,
+            const response = await api.post(
+                "/generateRecipe",
                 {
                     params: {
                         ingredients: ingredientsList.join(', '),
