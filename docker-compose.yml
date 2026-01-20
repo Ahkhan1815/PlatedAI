@@ -15,6 +15,7 @@ services:
     depends_on:
       - plated-datastore
   plated-datastore:
+    container_name: plated-datastore
     image: mongo:7.0
     ports:
       - "27017:27017"

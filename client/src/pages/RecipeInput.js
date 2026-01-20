@@ -1,23 +1,34 @@
 import React, { useState } from "react";
 import axios from 'axios';
+import * as Yup from 'yup';
 import { Container, Form, Button, Card, Badge } from "react-bootstrap";
 
 const hostUrl = process.env.REACT_APP_HOST_URL;
 
 const RecipeDisplay = ({ recipe }) => {
+    if (!recipe || typeof recipe !== 'object' || recipe.validResponse !== true) return null;
+
+    const ingredientsArray = Array.isArray(recipe.ingredients)
+        ? recipe.ingredients
+        : String(recipe.ingredients || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+
+    const instructionsArray = Array.isArray(recipe.instructions)
+        ? recipe.instructions
+        : String(recipe.instructions || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+
     const copyToClipboard = () => {
         const formattedRecipe = `
-${recipe.title}
+${recipe.title || ''}
 
 Ingredients:
-${recipe.ingredients.join('\n')}
+${ingredientsArray.join('\n')}
 
 Instructions:
-${recipe.instructions}
+${instructionsArray.join('\n')}
 
-Meal Type: ${recipe.mealType}
-Diet: ${recipe.diet}
-Calories: ${recipe.calories}
+Meal Type: ${recipe.mealType || ''}
+Diet: ${recipe.diet || ''}
+Calories: ${recipe.calories || ''}
         `.trim();
 
         navigator.clipboard.writeText(formattedRecipe);
@@ -26,7 +37,7 @@ Calories: ${recipe.calories}
     return (
         <div className="recipe-card bg-light p-4 rounded">
             <div className="d-flex justify-content-between align-items-start mb-3">
-                <h4 className="text-success mb-0">{recipe.title}</h4>
+                <h4 className="text-success mb-0 mr-2">{recipe.title}</h4>
                 <Button
                     variant="outline-success"
                     size="sm"
@@ -38,20 +49,24 @@ Calories: ${recipe.calories}
 
             <div className="recipe-content">
                 <div className="d-flex gap-3 mb-3">
-                    <Badge bg="secondary">{recipe.mealType}</Badge>
-                    <Badge bg="secondary">{recipe.diet}</Badge>
-                    <Badge bg="secondary">{recipe.calories} calories</Badge>
+                    <Badge bg="secondary">{recipe.mealType || ''}</Badge>
+                    <Badge bg="secondary">{recipe.diet || ''}</Badge>
+                    <Badge bg="secondary">{recipe.calories || ''} calories</Badge>
                 </div>
 
-                <h5 className="mt-3">Ingredients:</h5>
+                <h5 className="mt-3 text-center">Ingredients</h5>
                 <ul>
-                    {recipe.ingredients.map((ingredient, index) => (
-                        <li key={index}>{ingredient}</li>
+                    {ingredientsArray.map((ing, index) => (
+                        <li className="text-start" key={index}>{ing}</li>
                     ))}
                 </ul>
 
-                <h5 className="mt-4">Instructions:</h5>
-                <p style={{ whiteSpace: 'pre-line' }}>{recipe.instructions}</p>
+                <h5 className="mt-4 text-center">Instructions</h5>
+                <ol>
+                    {instructionsArray.map((step, index) => (
+                        <li className="text-start" key={index}>{step}</li>
+                    ))}
+                </ol>
             </div>
         </div>
     );
@@ -60,11 +75,16 @@ Calories: ${recipe.calories}
 function RecipeInput() {
     const [ingredient, setIngredient] = useState("");
     const [ingredientsList, setIngredientsList] = useState([]);
-    const [meal, setMeal] = useState("");
-    const [diet, setDiet] = useState("");
+    const [meal, setMeal] = useState("Any-Type");
+    const [diet, setDiet] = useState("No-Preference");
     const [calories, setCalories] = useState(200);
     const [isLoading, setIsLoading] = useState(false);
     const [recipe, setRecipe] = useState(null);
+    const [validationError, setValidationError] = useState("");
+
+    const validationSchema = Yup.object().shape({
+        ingredients: Yup.array().min(1, 'Please add at least one ingredient.'),
+    });
 
     const api = axios.create({
         baseURL: '/api/',
@@ -72,13 +92,21 @@ function RecipeInput() {
 
     const generateRecipe = async () => {
         try {
+            try {
+                await validationSchema.validate({ ingredients: ingredientsList });
+                setValidationError("");
+            } catch (validationErr) {
+                setValidationError(validationErr.message);
+                return;
+            }
+
             setIsLoading(true);
             const response = await api.post(
                 "/generateRecipe",
                 {
                     params: {
                         ingredients: ingredientsList.join(', '),
-                        calories: calories,
+                        calories: parseInt(calories),
                         mealtype: meal,
                         diet: diet
                     }
@@ -101,11 +129,16 @@ function RecipeInput() {
         if (val) {
             setIngredientsList((prev) => [...prev, val]);
             setIngredient("");
+            if (validationError) setValidationError("");
         }
     };
 
     const removeIngredient = (index) => {
-        setIngredientsList((prev) => prev.filter((_, i) => i !== index));
+        setIngredientsList((prev) => {
+            const next = prev.filter((_, i) => i !== index);
+            if (next.length > 0 && validationError) setValidationError("");
+            return next;
+        });
     };
 
     const onInputKeyDown = (e) => {
@@ -119,10 +152,10 @@ function RecipeInput() {
         <Container className="d-flex justify-content-center align-items-center py-5">
             <Card className="shadow-lg p-4 w-100" style={{ maxWidth: "500px" }}>
                 <Card.Body>
-                    <h2 className="text-center mb-4 text-success fw-bold">🍳 Recipe Builder</h2>
+                    <h2 className="text-center mb-4 text-success fw-light">Recipe Generator</h2>
 
                     <Form.Group className="mb-3">
-                        <Form.Label>Ingredients</Form.Label>
+                        <Form.Label >Ingredients</Form.Label>
                         <div className="d-flex">
                             <Form.Control
                                 type="text"
@@ -135,7 +168,9 @@ function RecipeInput() {
                                 Add
                             </Button>
                         </div>
-
+                        {validationError && (
+                            <Form.Text className="text-danger">{validationError}</Form.Text>
+                        )}
                         <div className="mt-3 d-flex flex-wrap gap-2">
                             {ingredientsList.map((item, index) => (
                                 <Badge
@@ -161,7 +196,7 @@ function RecipeInput() {
                     <Form.Group className="mb-3">
                         <Form.Label>Meal Type</Form.Label>
                         <Form.Select value={meal} onChange={(e) => setMeal(e.target.value)}>
-                            <option value="">Select...</option>
+                            <option value="Any Type">Select...</option>
                             <option>Breakfast</option>
                             <option>Lunch</option>
                             <option>Dinner</option>
@@ -181,7 +216,7 @@ function RecipeInput() {
                     <Form.Group className="mb-3">
                         <Form.Label>Dietary Restrictions</Form.Label>
                         <Form.Select value={diet} onChange={(e) => setDiet(e.target.value)}>
-                            <option value="">Select...</option>
+                            <option value="No Restrictions">Select...</option>
                             <option>Vegetarian</option>
                             <option>Vegan</option>
                             <option>Halal</option>
@@ -210,8 +245,19 @@ function RecipeInput() {
 
                     {!isLoading && recipe && (
                         <div className="mt-4">
-                            <h3 className="text-success mb-3">Your Recipe</h3>
-                            <RecipeDisplay recipe={recipe} />
+                            <h3 className="text-success fw-light mb-3">Your Recipe</h3>
+                            {typeof recipe === 'object' && recipe.validResponse === true ? (
+                                <RecipeDisplay recipe={recipe} />
+                            ) : typeof recipe === 'object' ? (
+                                <Card className="p-3 bg-light border-danger">
+                                    <h5 className="text-danger">Unable to generate recipe</h5>
+                                    <p className="mb-0">{recipe.errorMessage || 'The server returned an invalid response.'}</p>
+                                </Card>
+                            ) : (
+                                <Card className="p-3 bg-light">
+                                    <pre className="mb-0">{String(recipe)}</pre>
+                                </Card>
+                            )}
                         </div>
                     )}
                 </Card.Body>
