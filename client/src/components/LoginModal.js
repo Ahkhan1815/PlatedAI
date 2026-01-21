@@ -1,25 +1,34 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import { useState } from 'react';
 import { Modal, Button } from 'react-bootstrap';
 import axios from 'axios';
 import { Formik, Field, Form, ErrorMessage } from 'formik';
 import * as Yup from "yup";
 import { useNavigate } from 'react-router-dom';
+import AuthContext from '../contexts/AuthContext'
 
 
 const api = axios.create({
   baseURL: '/api/',
+  withCredentials: true,
 });
+
 
 
 function LoginModal({ show, setShow, setShowRegister }) {
   const [error, setError]= useState("");
-  const navigate = useNavigate();
+  const { setUser } = useContext(AuthContext);
+
   const logUser = async (values) => {
     try {
-      const res = await api.post("/login", { email: values.email, password: values.password, });
-      // localStorage.setItem("token", res.data.token);
-      console.log("Login Successful");
+      await api.post('/login', { email: values.email, password: values.password }, { withCredentials: true });
+      try {
+        const idRes = await api.get('/id');
+        setUser(idRes.data.user || null);
+      } catch (err) {
+        setUser(null);
+      }
+      console.log('Login Successful');
       setShow(false);
     }
     catch (err) {

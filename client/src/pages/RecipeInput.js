@@ -3,7 +3,6 @@ import axios from 'axios';
 import * as Yup from 'yup';
 import { Container, Form, Button, Card, Badge } from "react-bootstrap";
 
-const hostUrl = process.env.REACT_APP_HOST_URL;
 
 const RecipeDisplay = ({ recipe }) => {
     if (!recipe || typeof recipe !== 'object' || recipe.validResponse !== true) return null;
@@ -88,6 +87,7 @@ function RecipeInput() {
 
     const api = axios.create({
         baseURL: '/api/',
+        withCredentials: true
     });
 
     const generateRecipe = async () => {
@@ -104,19 +104,13 @@ function RecipeInput() {
             const response = await api.post(
                 "/generateRecipe",
                 {
-                    params: {
-                        ingredients: ingredientsList.join(', '),
-                        calories: parseInt(calories),
-                        mealtype: meal,
-                        diet: diet
-                    }
+                    ingredients: ingredientsList.join(', '),
+                    calories: parseInt(calories),
+                    mealtype: meal,
+                    diet: diet
                 },
-                {
-                    headers: { 'Content-Type': 'application/json' }
-                }
             );
             setRecipe(response.data);
-            console.log(response.data);
         } catch (error) {
             console.error('Error generating recipe:', error);
         } finally {
@@ -152,7 +146,8 @@ function RecipeInput() {
         <Container className="d-flex justify-content-center align-items-center py-5">
             <Card className="shadow-lg p-4 w-100" style={{ maxWidth: "500px" }}>
                 <Card.Body>
-                    <h2 className="text-center mb-4 text-success fw-light">Recipe Generator</h2>
+                    <h2 className="text-center mb-3 text-success fw-light">Recipe Generator</h2>
+                    <h6 className="text-center text-secondary mb-3 fw-light">Custom recipes with your ingredients</h6>
 
                     <Form.Group className="mb-3">
                         <Form.Label >Ingredients</Form.Label>
