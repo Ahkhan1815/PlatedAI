@@ -11,7 +11,6 @@ const api = axios.create({
     withCredentials: true
 });
 
-
 function Header() {
     const navigate = useNavigate();
     const { user, setUser, authLoading, loginModalOpen, setLoginModalOpen} = useContext(AuthContext);
