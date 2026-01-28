@@ -11,6 +11,7 @@ const api = axios.create({
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(false)
+  const [loginModalOpen, setLoginModalOpen] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -29,7 +30,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, setUser, authLoading }}>
+    <AuthContext.Provider value={{ user, setUser, authLoading, loginModalOpen, setLoginModalOpen}}>
       {children}
     </AuthContext.Provider>
   )

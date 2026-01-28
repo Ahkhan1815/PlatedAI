@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useState } from 'react'
 import { Navbar, Nav, Container, Dropdown } from 'react-bootstrap'
 import { useNavigate } from 'react-router-dom'
 import LoginModal from './LoginModal';
@@ -13,11 +13,9 @@ const api = axios.create({
 
 
 function Header() {
-
-    const [loginModalShow, setLoginModalShow] = useState(false);
-    const [registerModalShow, setRegisterModalShow] = useState(false);
-    const { user, setUser, authLoading } = useContext(AuthContext);
-
+    const navigate = useNavigate();
+    const { user, setUser, authLoading, loginModalOpen, setLoginModalOpen} = useContext(AuthContext);
+    const [registerModalOpen, setRegisterModalOpen] = useState(false);
     const logOut = async () => {
         try {
             await api.post("/logout", { withCredentials: true });
@@ -28,10 +26,11 @@ function Header() {
         }
     };
 
+
     return (
         <div>
-            <RegisterModal show={registerModalShow} setShow={setRegisterModalShow} setShowLogin={setLoginModalShow} />
-            <LoginModal show={loginModalShow} setShow={setLoginModalShow} setShowRegister={setRegisterModalShow} />
+            <RegisterModal show={registerModalOpen} setShow={setRegisterModalOpen} setShowLogin={setLoginModalOpen} />
+            <LoginModal show={loginModalOpen} setShow={setLoginModalOpen} setShowRegister={setRegisterModalOpen} />
             <Navbar expand="lg" className="bg-body-tertiary">
                 {authLoading && <Container>
                     <Navbar.Brand href="/" style={{ color: '#198754' }}>Plated.AI</Navbar.Brand>
@@ -50,14 +49,14 @@ function Header() {
 
                                     <Dropdown.Menu>
                                         <Dropdown.Item onClick={logOut}>Log out</Dropdown.Item>
-                                        <Dropdown.Item href="#/action-3">Profile</Dropdown.Item>
-                                        <Dropdown.Item href="#/action-2">Settings</Dropdown.Item>
+                                        <Dropdown.Item onClick={() => navigate('/profile')}>Profile</Dropdown.Item>
+                                        <Dropdown.Item onClick={() => navigate('/settings')}>Settings</Dropdown.Item>
                                     </Dropdown.Menu>
-                                </Dropdown>) : (<div className="d-flex justify-content-between">
-                                    <button onClick={() => setLoginModalShow(true)} className='btn btn-success me-2'>
+                                    </Dropdown>) : (<div className="d-flex justify-content-between">
+                                        <button onClick={() => setLoginModalOpen(true)} className='btn btn-success me-2'>
                                         Log in
                                     </button>
-                                    <button onClick={() => setRegisterModalShow(true)} className='btn btn-outline-success'>
+                                        <button onClick={() => setRegisterModalOpen(true)} className='btn btn-outline-success'>
                                         Sign up
                                     </button>
                                 </div>)}

@@ -96,6 +96,41 @@ def getID():
         return jsonify({"user": None}), 200
     return jsonify({"user": User.to_safe_dict(user)}), 200
 
+
+@app.route('/profile', methods=['GET'])
+@jwt_required()
+def get_profile():
+    email = get_jwt_identity()
+    if not email:
+        return jsonify({"user": None}), 200
+    user_doc = userCollection.find_one({'email': email})
+    if not user_doc:
+        return jsonify({"user": None}), 200
+    user = User.from_mongo(user_doc)
+    return jsonify({"user": User.to_safe_dict(user)}), 200
+
+
+@app.route('/profile', methods=['PUT'])
+@jwt_required()
+def update_profile():
+    email = get_jwt_identity()
+    if not email:
+        return jsonify({"error": "Not authenticated"}), 401
+    data = request.get_json() or {}
+    allergies = data.get('allergies', [])
+    health_conditions = data.get('health_conditions', [])
+
+    # Accept comma-separated strings from the client as well
+    if isinstance(allergies, str):
+        allergies = [a.strip() for a in allergies.split(',') if a.strip()]
+    if isinstance(health_conditions, str):
+        health_conditions = [c.strip() for c in health_conditions.split(',') if c.strip()]
+
+    userCollection.update_one({'email': email}, {'$set': {'allergies': allergies, 'health_conditions': health_conditions}})
+    user_doc = userCollection.find_one({'email': email})
+    user = User.from_mongo(user_doc)
+    return jsonify({"user": User.to_safe_dict(user)}), 200
+
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json() or {}
