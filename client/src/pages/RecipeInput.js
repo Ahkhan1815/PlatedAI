@@ -1,7 +1,36 @@
-import React, { useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import axios from 'axios';
 import * as Yup from 'yup';
 import { Container, Form, Button, Card, Badge } from "react-bootstrap";
+import CreatableSelect from 'react-select/creatable';
+import AuthContext from "../contexts/AuthContext";
+
+const PRESET_DIETARY_RESTRICTIONS = [
+    'Vegetarian',
+    'Vegan',
+    'Halal',
+    'Kosher',
+    'Gluten-Free',
+    'Dairy-Free',
+    'Nut-Free',
+    'Pescatarian'
+];
+
+const formatEntry = (value) => (
+    String(value || '')
+        .trim()
+        .split(/\s+/)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ')
+);
+
+const addUnique = (list, value) => {
+    const formatted = formatEntry(value);
+    if (!formatted) return list;
+    const exists = (list || []).some(item => item.toLowerCase() === formatted.toLowerCase());
+    if (exists) return list;
+    return [...(list || []), formatted];
+};
 
 
 const RecipeDisplay = ({ recipe }) => {
@@ -34,7 +63,7 @@ Calories: ${recipe.calories || ''}
     };
 
     return (
-        <div className="recipe-card bg-light p-4 rounded">
+        <div className="recipe-card p-4 rounded">
             <div className="d-flex justify-content-between align-items-start mb-3">
                 <h4 className="text-success mb-0 mr-2">{recipe.title}</h4>
                 <Button
@@ -72,14 +101,22 @@ Calories: ${recipe.calories || ''}
 };
 
 function RecipeInput() {
+    const { user } = useContext(AuthContext);
     const [ingredient, setIngredient] = useState("");
     const [ingredientsList, setIngredientsList] = useState([]);
     const [meal, setMeal] = useState("Any-Type");
-    const [diet, setDiet] = useState("No-Preference");
-    const [calories, setCalories] = useState(200);
+    const [dietaryRestrictions, setDietaryRestrictions] = useState([]);
+    const [calories, setCalories] = useState(500);
     const [isLoading, setIsLoading] = useState(false);
     const [recipe, setRecipe] = useState(null);
     const [validationError, setValidationError] = useState("");
+
+    useEffect(() => {
+        const restrictions = Array.isArray(user?.dietary_restrictions)
+            ? user.dietary_restrictions
+            : [];
+        setDietaryRestrictions(Array.from(new Set(restrictions)));
+    }, [user]);
 
     const validationSchema = Yup.object().shape({
         ingredients: Yup.array().min(1, 'Please add at least one ingredient.'),
@@ -107,7 +144,7 @@ function RecipeInput() {
                     ingredients: ingredientsList.join(', '),
                     calories: parseInt(calories),
                     mealtype: meal,
-                    diet: diet
+                    diet: dietaryRestrictions.length > 0 ? dietaryRestrictions.join(', ') : 'No-Preference'
                 },
             );
             setRecipe(response.data);
@@ -142,6 +179,8 @@ function RecipeInput() {
         }
     };
 
+    const dietaryRestrictionOptions = PRESET_DIETARY_RESTRICTIONS.map(item => ({ value: item, label: item }));
+
     return (
         <Container className="d-flex justify-content-center align-items-center py-5">
             <Card className="shadow-lg p-4 w-100" style={{ maxWidth: "500px" }}>
@@ -169,7 +208,7 @@ function RecipeInput() {
                         <div className="mt-3 d-flex flex-wrap gap-2">
                             {ingredientsList.map((item, index) => (
                                 <Badge
-                                    bg="secondary"
+                                    bg="success"
                                     key={index}
                                     className="ingredient-badge badge-hover"
                                     title={item}
@@ -191,7 +230,7 @@ function RecipeInput() {
                     <Form.Group className="mb-3">
                         <Form.Label>Meal Type</Form.Label>
                         <Form.Select value={meal} onChange={(e) => setMeal(e.target.value)}>
-                            <option value="Any Type">Select...</option>
+                            <option value="Any-Type">Select...</option>
                             <option>Breakfast</option>
                             <option>Lunch</option>
                             <option>Dinner</option>
@@ -210,14 +249,21 @@ function RecipeInput() {
 
                     <Form.Group className="mb-3">
                         <Form.Label>Dietary Restrictions</Form.Label>
-                        <Form.Select value={diet} onChange={(e) => setDiet(e.target.value)}>
-                            <option value="No Restrictions">Select...</option>
-                            <option>Vegetarian</option>
-                            <option>Vegan</option>
-                            <option>Halal</option>
-                            <option>Kosher</option>
-                            <option>Gluten-Free</option>
-                        </Form.Select>
+                        <CreatableSelect
+                            isMulti
+                            classNamePrefix="diet-select"
+                            options={dietaryRestrictionOptions}
+                            placeholder="Type or select dietary restrictions..."
+                            value={(dietaryRestrictions || []).map(item => ({ value: item, label: item }))}
+                            onChange={(selected) => {
+                                const next = (selected || []).map(item => item.value);
+                                setDietaryRestrictions(Array.from(new Set(next)));
+                            }}
+                            formatCreateLabel={(inputValue) => `Add "${inputValue}"`}
+                        />
+                        {dietaryRestrictions.length === 0 && (
+                            <Form.Text className="text-muted">No restrictions selected. Using No-Preference.</Form.Text>
+                        )}
                     </Form.Group>
 
                     <Button
@@ -244,12 +290,12 @@ function RecipeInput() {
                             {typeof recipe === 'object' && recipe.validResponse === true ? (
                                 <RecipeDisplay recipe={recipe} />
                             ) : typeof recipe === 'object' ? (
-                                <Card className="p-3 bg-light border-danger">
+                                <Card className="p-3 theme-surface border-danger">
                                     <h5 className="text-danger">Unable to generate recipe</h5>
                                     <p className="mb-0">{recipe.errorMessage || 'The server returned an invalid response.'}</p>
                                 </Card>
                             ) : (
-                                <Card className="p-3 bg-light">
+                                <Card className="p-3 theme-surface">
                                     <pre className="mb-0">{String(recipe)}</pre>
                                 </Card>
                             )}
@@ -258,6 +304,31 @@ function RecipeInput() {
                 </Card.Body>
 
                 <style>{`
+                    .recipe-card,
+                    .theme-surface {
+                        background-color: #f8f9fa;
+                        color: #212529;
+                        border: 1px solid rgba(0, 0, 0, 0.08);
+                    }
+
+                    [data-bs-theme='dark'] .recipe-card,
+                    [data-bs-theme='dark'] .theme-surface {
+                        background-color: #1f242a;
+                        color: #f1f3f5;
+                        border: 1px solid rgba(255, 255, 255, 0.08);
+                    }
+
+                    [data-bs-theme='dark'] .recipe-card h4,
+                    [data-bs-theme='dark'] .recipe-card h5,
+                    [data-bs-theme='dark'] .recipe-card ol,
+                    [data-bs-theme='dark'] .recipe-card ul,
+                    [data-bs-theme='dark'] .recipe-card li,
+                    [data-bs-theme='dark'] .theme-surface h5,
+                    [data-bs-theme='dark'] .theme-surface p,
+                    [data-bs-theme='dark'] .theme-surface pre {
+                        color: #f1f3f5;
+                    }
+
                     .ingredient-badge {
                         position: relative;
                         display: inline-flex;
@@ -275,6 +346,104 @@ function RecipeInput() {
                         text-overflow: ellipsis;
                         white-space: nowrap;
                         text-align: left;
+                        font-weight: 700;
+                    }
+
+                    .diet-select__control {
+                        background-color: #ffffff !important;
+                        border-color: #ced4da !important;
+                        color: #212529 !important;
+                        min-height: 38px !important;
+                    }
+
+                    .diet-select__input-container,
+                    .diet-select__input,
+                    .diet-select__single-value,
+                    .diet-select__placeholder {
+                        color: #212529 !important;
+                    }
+
+                    .diet-select__menu,
+                    .diet-select__option {
+                        background-color: #ffffff !important;
+                        color: #212529 !important;
+                    }
+
+                    .diet-select__option--is-focused {
+                        background-color: #e9f7ef !important;
+                    }
+
+                    .diet-select__multi-value {
+                        background-color: #198754 !important;
+                        position: relative;
+                        display: inline-flex;
+                        align-items: center;
+                        padding: 0.45rem 2.2rem 0.45rem 0.8rem !important;
+                        border-radius: 999px !important;
+                        max-width: 200px;
+                        line-height: 1.05;
+                    }
+
+                    .diet-select__multi-value__label,
+                    .diet-select__multi-value__remove {
+                        color: #ffffff !important;
+                    }
+
+                    .diet-select__multi-value__label {
+                        display: inline-block;
+                        max-width: 100%;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                        text-align: left;
+                        font-weight: 700 !important;
+                        padding: 0 !important;
+                    }
+
+                    .diet-select__multi-value__remove {
+                        display: none !important;
+                        position: absolute;
+                        right: 6px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        border: none;
+                        background: rgba(0,0,0,0.35) !important;
+                        width: 22px;
+                        height: 22px;
+                        border-radius: 999px !important;
+                        font-weight: 700;
+                        line-height: 18px;
+                        cursor: pointer;
+                        padding: 0 !important;
+                        align-items: center;
+                        justify-content: center;
+                    }
+
+                    .diet-select__multi-value:hover .diet-select__multi-value__remove {
+                        display: inline-flex !important;
+                    }
+
+                    [data-bs-theme='dark'] .diet-select__control {
+                        background-color: #1f242a !important;
+                        border-color: rgba(255, 255, 255, 0.15) !important;
+                        color: #f1f3f5 !important;
+                    }
+
+                    [data-bs-theme='dark'] .diet-select__input-container,
+                    [data-bs-theme='dark'] .diet-select__input,
+                    [data-bs-theme='dark'] .diet-select__single-value,
+                    [data-bs-theme='dark'] .diet-select__placeholder {
+                        color: #f1f3f5 !important;
+                    }
+
+                    [data-bs-theme='dark'] .diet-select__menu,
+                    [data-bs-theme='dark'] .diet-select__option {
+                        background-color: #1f242a !important;
+                        color: #f1f3f5 !important;
+                    }
+
+                    [data-bs-theme='dark'] .diet-select__option--is-focused {
+                        background-color: #2c333a !important;
                     }
 
                     .delete-x {
@@ -315,6 +484,10 @@ function RecipeInput() {
                         .delete-x {
                             display: inline-flex;
                         }
+
+                        .diet-select__multi-value__remove {
+                            display: inline-flex !important;
+                        }
                     }
 
                     @media (max-width: 480px) {
@@ -323,10 +496,20 @@ function RecipeInput() {
                             padding-right: 1.6rem;
                         }
 
+                        .diet-select__multi-value {
+                            max-width: 40%;
+                            padding-right: 1.6rem !important;
+                        }
+
                         .badge-text {
                             font-size: 0.9rem;
                         }
+
+                        .diet-select__multi-value__label {
+                            font-size: 0.9rem;
+                        }
                     }
+
                 `}</style>
             </Card>
         </Container>

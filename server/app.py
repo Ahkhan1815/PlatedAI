@@ -117,16 +117,38 @@ def update_profile():
     if not email:
         return jsonify({"error": "Not authenticated"}), 401
     data = request.get_json() or {}
-    allergies = data.get('allergies', [])
-    health_conditions = data.get('health_conditions', [])
+    update_fields = {}
 
-    # Accept comma-separated strings from the client as well
-    if isinstance(allergies, str):
-        allergies = [a.strip() for a in allergies.split(',') if a.strip()]
-    if isinstance(health_conditions, str):
-        health_conditions = [c.strip() for c in health_conditions.split(',') if c.strip()]
+    if 'allergies' in data:
+        allergies = data.get('allergies', [])
+        if isinstance(allergies, str):
+            allergies = [a.strip() for a in allergies.split(',') if a.strip()]
+        update_fields['allergies'] = allergies
 
-    userCollection.update_one({'email': email}, {'$set': {'allergies': allergies, 'health_conditions': health_conditions}})
+    if 'health_conditions' in data:
+        health_conditions = data.get('health_conditions', [])
+        if isinstance(health_conditions, str):
+            health_conditions = [c.strip() for c in health_conditions.split(',') if c.strip()]
+        update_fields['health_conditions'] = health_conditions
+
+    if 'dietary_restrictions' in data:
+        dietary_restrictions = data.get('dietary_restrictions', [])
+        if isinstance(dietary_restrictions, str):
+            dietary_restrictions = [d.strip() for d in dietary_restrictions.split(',') if d.strip()]
+        update_fields['dietary_restrictions'] = dietary_restrictions
+
+    if 'theme_preference' in data:
+        theme_preference = str(data.get('theme_preference', 'light')).lower()
+        if theme_preference not in ['light', 'dark']:
+            return jsonify({"error": "Invalid theme_preference"}), 400
+        update_fields['theme_preference'] = theme_preference
+
+    if update_fields:
+        userCollection.update_one(
+            {'email': email},
+            {'$set': update_fields}
+        )
+
     user_doc = userCollection.find_one({'email': email})
     user = User.from_mongo(user_doc)
     return jsonify({"user": User.to_safe_dict(user)}), 200
@@ -137,11 +159,25 @@ def register():
     email = data.get('email')
     password = data.get('password')
     name = data.get('name', '')
+    dietary_restrictions = data.get('dietary_restrictions', [])
+    theme_preference = str(data.get('theme_preference', 'light')).lower()
+
+    if isinstance(dietary_restrictions, str):
+        dietary_restrictions = [d.strip() for d in dietary_restrictions.split(',') if d.strip()]
+
+    if theme_preference not in ['light', 'dark']:
+        theme_preference = 'light'
 
     if userCollection.find_one({'email': email}):
         return {'error': 'Email already in use'}, 409
 
-    user = User.create(email=email, password=password, name=name)
+    user = User.create(
+        email=email,
+        password=password,
+        name=name,
+        dietary_restrictions=dietary_restrictions,
+        theme_preference=theme_preference
+    )
     res = userCollection.insert_one(user.to_mongo())
     user._id = str(res.inserted_id)
 

@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 
 class User:
-    def __init__(self, email, password_hash, _id=None, name='', created_at=None, allergies=None, health_conditions=None):
+    def __init__(self, email, password_hash, _id=None, name='', created_at=None, allergies=None, health_conditions=None, dietary_restrictions=None, theme_preference='light'):
         self.email = email
         self.password_hash = password_hash
         self._id = str(_id) if _id else None
@@ -12,15 +12,19 @@ class User:
         self.created_at = created_at or datetime.now(timezone.utc)
         self.allergies = allergies or []
         self.health_conditions = health_conditions or []
+        self.dietary_restrictions = dietary_restrictions or []
+        self.theme_preference = theme_preference or 'light'
 
     @staticmethod
-    def create(email, password, name='', allergies=None, health_conditions=None):
+    def create(email, password, name='', allergies=None, health_conditions=None, dietary_restrictions=None, theme_preference='light'):
         return User(
             email=email,
             password_hash=generate_password_hash(password),
             name=name,
             allergies=allergies or [],
-            health_conditions=health_conditions or []
+            health_conditions=health_conditions or [],
+            dietary_restrictions=dietary_restrictions or [],
+            theme_preference=theme_preference or 'light'
         )
 
     def verify_password(self, password):
@@ -33,7 +37,9 @@ class User:
             'name': self.name,
             'created_at': self.created_at,
             'allergies': self.allergies,
-            'health_conditions': self.health_conditions
+            'health_conditions': self.health_conditions,
+            'dietary_restrictions': self.dietary_restrictions,
+            'theme_preference': self.theme_preference
         }
 
     def to_safe_dict(self):
@@ -43,7 +49,9 @@ class User:
             'name': self.name,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'allergies': self.allergies,
-            'health_conditions': self.health_conditions
+            'health_conditions': self.health_conditions,
+            'dietary_restrictions': self.dietary_restrictions,
+            'theme_preference': self.theme_preference
         }
 
     @staticmethod
@@ -57,5 +65,7 @@ class User:
             name=doc.get('name', ''),
             created_at=doc.get('created_at'),
             allergies=doc.get('allergies', []),
-            health_conditions=doc.get('health_conditions', [])
+            health_conditions=doc.get('health_conditions', []),
+            dietary_restrictions=doc.get('dietary_restrictions', []),
+            theme_preference=doc.get('theme_preference', 'light')
         )
